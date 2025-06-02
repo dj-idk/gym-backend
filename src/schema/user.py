@@ -18,6 +18,7 @@ class RoleBase(BaseModel):
 
 
 class UserBase(BaseModel):
+    username: str
     email: EmailStr
 
 
@@ -49,7 +50,6 @@ class RoleUpdate(BaseModel):
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    password: Optional[str] = None
     is_verified: Optional[bool] = None
     status: Optional[UserStatus] = None
     roles: Optional[List[UUID]] = None

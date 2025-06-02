@@ -52,7 +52,9 @@ class User(BaseEntity):
     """User model for authentication"""
 
     __tablename__ = "users"
-
+    username: Mapped[str] = mapped_column(
+        String, unique=True, index=True, nullable=False
+    )
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

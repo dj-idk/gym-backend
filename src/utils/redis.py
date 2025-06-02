@@ -175,14 +175,14 @@ def clear_all_cache():
 
 
 def store_token_in_redis(
-    token_id: str, admin_id: int, expires_at: datetime, additional_data: dict = None
+    token_id: str, user_id: int, expires_at: datetime, additional_data: dict = None
 ):
     """
     Store token information in Redis with automatic expiration
 
     Args:
         token_id: The JWT token ID (jti)
-        admin_id: The admin ID associated with the token
+        user_id: The user ID associated with the token
         expires_at: When the token expires
         additional_data: Optional additional data to store with the token
     """
@@ -201,7 +201,7 @@ def store_token_in_redis(
         token_key = f"token:{token_id}"
 
         token_data = {
-            "admin_id": admin_id,
+            "user_id": user_id,
             "is_revoked": False,
             "expires_at": expires_at.isoformat(),
         }
@@ -211,8 +211,8 @@ def store_token_in_redis(
 
         redis_client.setex(name=token_key, time=ttl, value=serialize_data(token_data))
 
-        admin_tokens_key = f"admin_tokens:{admin_id}"
-        redis_client.sadd(admin_tokens_key, token_id)
+        user_tokens_key = f"user_tokens:{user_id}"
+        redis_client.sadd(user_tokens_key, token_id)
 
         logger.info(f"Stored token {token_id} in Redis (expires in {ttl}s)")
         return True

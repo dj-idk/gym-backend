@@ -5,16 +5,15 @@ from datetime import timedelta
 from typing import Any
 
 from src.data.database import get_db
-from src.schema.auth import (
+from src.schema import (
     Token,
-    TokenPayload,
     UserCreate,
     UserLogin,
     PasswordResetRequest,
     PasswordReset,
     EmailVerification,
 )
-from src.service.auth import auth_service
+from src.service import auth_service
 from src.utils.exceptions import BadRequest, Unauthorized
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
