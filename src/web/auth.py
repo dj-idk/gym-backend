@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import timedelta
 from typing import Any
 
-from src.data.database import get_db
+from fastapi import APIRouter, status
+from fastapi.security import OAuth2PasswordBearer
+
+from src.dependencies import db_dependency
 from src.schema import (
     Token,
     UserCreate,
@@ -14,13 +13,15 @@ from src.schema import (
     EmailVerification,
 )
 from src.service import auth_service
-from src.utils.exceptions import BadRequest, Unauthorized
+from src.utils import BadRequest, Unauthorized
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) -> Any:
+async def register(user_data: UserCreate, db: db_dependency) -> Any:
     """
     Register a new user and return access token.
     """
@@ -28,24 +29,26 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
+async def login(form_data: UserLogin, db: db_dependency) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests.
     """
-    return await auth_service.authenticate_user(db, form_data.email, form_data.password)
+    return await auth_service.authenticate_user(
+        db, form_data.username, form_data.password
+    )
 
 
 @router.post("/logout")
-async def logout(token: str, db: AsyncSession = Depends(get_db)) -> Any:
+async def logout(token: str) -> Any:
     """
     Logout user by invalidating the current token.
     """
-    return await auth_service.logout(db, token)
+    return await auth_service.logout(token)
 
 
 @router.post("/password-reset/request")
 async def request_password_reset(
-    request_data: PasswordResetRequest, db: AsyncSession = Depends(get_db)
+    request_data: PasswordResetRequest, db: db_dependency
 ) -> Any:
     """
     Request a password reset token.
@@ -54,9 +57,7 @@ async def request_password_reset(
 
 
 @router.post("/password-reset/confirm")
-async def reset_password(
-    reset_data: PasswordReset, db: AsyncSession = Depends(get_db)
-) -> Any:
+async def reset_password(reset_data: PasswordReset, db: db_dependency) -> Any:
     """
     Reset password using token.
     """
@@ -66,9 +67,7 @@ async def reset_password(
 
 
 @router.post("/verify-email")
-async def verify_email(
-    verification_data: EmailVerification, db: AsyncSession = Depends(get_db)
-) -> Any:
+async def verify_email(verification_data: EmailVerification, db: db_dependency) -> Any:
     """
     Verify user email with token.
     """
@@ -76,7 +75,7 @@ async def verify_email(
 
 
 @router.post("/refresh-token", response_model=Token)
-async def refresh_token(token: str, db: AsyncSession = Depends(get_db)) -> Any:
+async def refresh_token(token: str, db: db_dependency) -> Any:
     """
     Refresh access token.
     """

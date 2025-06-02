@@ -85,7 +85,7 @@ class BaseCRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         skip: int = 0,
         limit: int = 100,
         order_by: Optional[str] = None,
-        order_direction: Optional[OrderDirection] = OrderDirection.asc,
+        order_direction: Optional[OrderDirection] = OrderDirection.ASC,
     ) -> Tuple[List[ModelType], Pagination]:
         """
         Get multiple records with pagination and ordering.
@@ -110,7 +110,7 @@ class BaseCRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         # Apply ordering if specified
         if order_by:
             order_column = getattr(self.model, order_by)
-            if order_direction == OrderDirection.desc:
+            if order_direction == OrderDirection.DESC:
                 query = query.order_by(desc(order_column))
             else:
                 query = query.order_by(asc(order_column))
@@ -146,7 +146,7 @@ class BaseCRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         skip: int = 0,
         limit: int = 100,
         order_by: Optional[str] = None,
-        order_direction: Optional[OrderDirection] = OrderDirection.asc,
+        order_direction: Optional[OrderDirection] = OrderDirection.ASC,
     ) -> Tuple[List[ModelType], Pagination]:
         """
         Get multiple records with custom filter, pagination, and ordering.
@@ -176,7 +176,7 @@ class BaseCRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         # Apply ordering if specified
         if order_by:
             order_column = getattr(self.model, order_by)
-            if order_direction == OrderDirection.desc:
+            if order_direction == OrderDirection.DESC:
                 query = query.order_by(desc(order_column))
             else:
                 query = query.order_by(asc(order_column))

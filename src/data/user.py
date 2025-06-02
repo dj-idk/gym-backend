@@ -48,32 +48,6 @@ class UserStatus(enum.Enum):
     PENDING_VERIFICATION = "pending_verification"
 
 
-class User(BaseEntity):
-    """User model for authentication"""
-
-    __tablename__ = "users"
-    username: Mapped[str] = mapped_column(
-        String, unique=True, index=True, nullable=False
-    )
-    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    last_login: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus), default=UserStatus.PENDING_VERIFICATION, nullable=False
-    )
-
-    # Relationships
-    roles: Mapped[List["Role"]] = relationship(
-        secondary=user_role, back_populates="users"
-    )
-
-    def __repr__(self) -> str:
-        return f"<User {self.email}>"
-
-
 class Role(BaseEntity):
     """Role model for authorization"""
 
@@ -104,8 +78,35 @@ class Permission(BaseEntity):
 
     # Relationships
     roles: Mapped[List["Role"]] = relationship(
-        secondary=role_permission, back_populates="roles"
+        secondary=role_permission, back_populates="permissions"
     )
 
     def __repr__(self) -> str:
         return f"<Permission {self.name}>"
+
+
+class User(BaseEntity):
+    """User model for authentication"""
+
+    __tablename__ = "users"
+    username: Mapped[str] = mapped_column(
+        String, unique=True, index=True, nullable=True
+    )
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    last_login: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    status: Mapped[UserStatus] = mapped_column(
+        Enum(UserStatus), default=UserStatus.PENDING_VERIFICATION, nullable=False
+    )
+
+    # Relationships
+    roles: Mapped[List["Role"]] = relationship(
+        secondary=user_role, back_populates="users"
+    )
+
+    def __repr__(self) -> str:
+        return f"<User {self.email}>"

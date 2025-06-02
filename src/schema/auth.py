@@ -18,7 +18,7 @@ class TokenPayload(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    username: EmailStr | str
     password: str
 
 

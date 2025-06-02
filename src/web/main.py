@@ -9,6 +9,8 @@ from src.utils import setup_limiter
 from src.data import init_db, close_db_connection, Base
 from src.config import settings
 
+from .auth import router as auth_router
+
 # CORS Variable configuration
 cors_origins = (
     settings.CORS_ALLOW_ORIGINS.split(",") if settings.CORS_ALLOW_ORIGINS else ["*"]
@@ -60,3 +62,6 @@ app.add_middleware(RequestLoggingMiddleware)
 @app.get("/")
 async def root():
     return {"message": "Welcome to Gym Backend API", "docs": "/docs"}
+
+
+app.include_router(auth_router)

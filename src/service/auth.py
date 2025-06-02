@@ -76,7 +76,6 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
         user_in_db = User(
             email=user_data.email,
             hashed_password=hashed_password,
-            full_name=user_data.full_name,
             is_active=True,
             is_verified=False,
         )
@@ -87,7 +86,12 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
 
         access_token = self.create_access_token(user_in_db.id)
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "expires_at": datetime.now()
+            + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        }
 
     async def authenticate_user(
         self, db: AsyncSession, username_or_email: str, password: str
