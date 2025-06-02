@@ -1,7 +1,20 @@
 from enum import Enum
-from typing import List
+from typing import Generic, List, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+
+T = TypeVar("T")
+
+
+class OrderDirection(str, Enum):
+    ASC = "asc"
+    DESC = "desc"
+
+
+class BulkID(BaseModel):
+    """Schema for batch deleting media"""
+
+    ids: List[int]
 
 
 class Pagination(BaseModel):
@@ -19,12 +32,12 @@ class Pagination(BaseModel):
     has_next: bool = Field(..., description="Whether there is a next page")
 
 
-class OrderDirection(str, Enum):
-    ASC = "asc"
-    DESC = "desc"
+class PaginatedResponse(BaseModel, Generic[T]):
+    """
+    Generic paginated response.
+    """
 
+    items: List[T]
+    pagination: Pagination
 
-class BulkID(BaseModel):
-    """Schema for batch deleting media"""
-
-    ids: List[int]
+    model_config = ConfigDict(from_attributes=True)
