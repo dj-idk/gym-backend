@@ -1,0 +1,107 @@
+import enum
+from datetime import datetime
+from typing import Optional, List
+
+from sqlalchemy import String, Boolean, DateTime, Enum, ForeignKey, Table
+from sqlalchemy.orm import mapped_column, relationship, Mapped
+from sqlalchemy.dialects.postgresql import UUID
+
+from .base import BaseEntity
+
+
+# Association table for many-to-many relationship between users and roles
+user_role = Table(
+    "user_role",
+    BaseEntity.metadata,
+    mapped_column(
+        "user_id", UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True
+    ),
+    mapped_column(
+        "role_id", UUID(as_uuid=True), ForeignKey("roles.id"), primary_key=True
+    ),
+)
+
+# Association table for many-to-many relationship between roles and permissions
+role_permission = Table(
+    "role_permission",
+    BaseEntity.metadata,
+    mapped_column(
+        "role_id", UUID(as_uuid=True), ForeignKey("roles.id"), primary_key=True
+    ),
+    mapped_column(
+        "permission_id",
+        UUID(as_uuid=True),
+        ForeignKey("permissions.id"),
+        primary_key=True,
+    ),
+)
+
+
+class UserStatus(enum.Enum):
+    """Enum for user status"""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    SUSPENDED = "suspended"
+    PENDING_VERIFICATION = "pending_verification"
+
+
+class User(BaseEntity):
+    """User model for authentication"""
+
+    __tablename__ = "users"
+
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    last_login: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    status: Mapped[UserStatus] = mapped_column(
+        Enum(UserStatus), default=UserStatus.PENDING_VERIFICATION, nullable=False
+    )
+
+    # Relationships
+    roles: Mapped[List["Role"]] = relationship(
+        secondary=user_role, back_populates="users"
+    )
+
+    def __repr__(self) -> str:
+        return f"<User {self.email}>"
+
+
+class Role(BaseEntity):
+    """Role model for authorization"""
+
+    __tablename__ = "roles"
+
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Relationships
+    users: Mapped[List["User"]] = relationship(
+        secondary=user_role, back_populates="roles"
+    )
+    permissions: Mapped[List["Permission"]] = relationship(
+        secondary=role_permission, back_populates="roles"
+    )
+
+    def __repr__(self) -> str:
+        return f"<Role {self.name}>"
+
+
+class Permission(BaseEntity):
+    """Permission model for fine-grained access control"""
+
+    __tablename__ = "permissions"
+
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Relationships
+    roles: Mapped[List["Role"]] = relationship(
+        secondary=role_permission, back_populates="roles"
+    )
+
+    def __repr__(self) -> str:
+        return f"<Permission {self.name}>"

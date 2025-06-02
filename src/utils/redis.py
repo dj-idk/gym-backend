@@ -74,7 +74,7 @@ def generate_cache_key(func_name: str, kwargs: dict) -> str:
         for k, v in sorted(filtered_kwargs.items()):
             key_parts.append(f"{k}:{v}")
 
-    return f"dopedev:{':'.join(key_parts)}"
+    return f"gym_backend:{':'.join(key_parts)}"
 
 
 def redis_cache(expire_seconds: int = 3000):
@@ -141,7 +141,7 @@ async def invalidate_public_cache():
         return False
 
     try:
-        pattern = "dopedev:read_*"
+        pattern = "gym_backend:read_*"
         cursor = 0
         deleted_count = 0
 
