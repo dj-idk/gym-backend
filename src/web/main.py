@@ -6,7 +6,7 @@ from starlette_csrf import CSRFMiddleware
 
 from src.middleware import RequestLoggingMiddleware
 from src.utils import setup_limiter
-from src.data import init_db, close_db_connection
+from src.data import init_db, close_db_connection, Base
 from src.config import settings
 
 # CORS Variable configuration
@@ -54,5 +54,9 @@ app.add_middleware(
     sensitive_cookies="Authorization",
     cookie_domain=settings.CSRF_COOKIE_DOMAIN,
 )
-
 app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to Gym Backend API", "docs": "/docs"}

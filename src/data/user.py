@@ -2,7 +2,15 @@ import enum
 from datetime import datetime
 from typing import Optional, List
 
-from sqlalchemy import String, Boolean, DateTime, Enum, ForeignKey, Table
+from sqlalchemy import (
+    String,
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Table,
+    Column,
+)
 from sqlalchemy.orm import mapped_column, relationship, Mapped
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -13,22 +21,16 @@ from .base import BaseEntity
 user_role = Table(
     "user_role",
     BaseEntity.metadata,
-    mapped_column(
-        "user_id", UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True
-    ),
-    mapped_column(
-        "role_id", UUID(as_uuid=True), ForeignKey("roles.id"), primary_key=True
-    ),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True),
+    Column("role_id", UUID(as_uuid=True), ForeignKey("roles.id"), primary_key=True),
 )
 
 # Association table for many-to-many relationship between roles and permissions
 role_permission = Table(
     "role_permission",
     BaseEntity.metadata,
-    mapped_column(
-        "role_id", UUID(as_uuid=True), ForeignKey("roles.id"), primary_key=True
-    ),
-    mapped_column(
+    Column("role_id", UUID(as_uuid=True), ForeignKey("roles.id"), primary_key=True),
+    Column(
         "permission_id",
         UUID(as_uuid=True),
         ForeignKey("permissions.id"),
