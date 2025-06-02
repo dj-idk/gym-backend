@@ -7,6 +7,8 @@ T = TypeVar("T")
 
 
 class OrderDirection(str, Enum):
+    """Order direction enum. Used for sorting in API responses."""
+
     ASC = "asc"
     DESC = "desc"
 
