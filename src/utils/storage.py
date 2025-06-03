@@ -148,7 +148,7 @@ async def upload_file(
 upload_image = functools.partial(
     upload_file,
     allowed_types=ALLOWED_IMAGE_TYPES,
-    max_size=500,
+    max_size=1000,
     size_unit="KB",
     media_type="images",
 )

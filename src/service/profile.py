@@ -130,6 +130,7 @@ class ProfileService(BaseCRUDService[Profile, ProfileUpdate, ProfileUpdate]):
                 file_name=file.filename,
                 file_size=file.size,
                 file_type=file.content_type,
+                alt_text=f"User {profile.first_name if profile.first_name else str(user_id)} profile photo",
             )
 
             db.add(photo)
@@ -141,6 +142,34 @@ class ProfileService(BaseCRUDService[Profile, ProfileUpdate, ProfileUpdate]):
         except Exception as e:
             logger.error(f"Error uploading profile photo: {str(e)}")
             raise ServiceUnavailable("Failed to upload profile photo")
+
+    async def get_profile_photo(
+        self, db: AsyncSession, user_id: UUID
+    ) -> Optional[ProfilePhoto]:
+        """
+        Get a user's profile photo.
+
+        Args:
+            db: Database session
+            user_id: ID of the user
+
+        Returns:
+            The profile photo if found, None otherwise
+        """
+        # Get the profile for this user
+        profile = await self.get_profile_by_user_id(db, user_id)
+        if not profile:
+            raise NotFound(f"Profile for user with ID {user_id} not found")
+
+        # Get the photo (there should be only one)
+        query = select(ProfilePhoto).where(ProfilePhoto.profile_id == profile.id)
+        result = await db.execute(query)
+        photo = result.scalars().first()
+
+        if not photo:
+            raise NotFound("Profile photo not found")
+
+        return photo
 
     async def delete_profile_photo(self, db: AsyncSession, user_id: UUID) -> None:
         """

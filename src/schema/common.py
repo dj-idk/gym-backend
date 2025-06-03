@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Generic, List, TypeVar, Dict, Optional
 from uuid import UUID
+from datetime import datetime
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -59,7 +60,10 @@ class MediaEntityBase(BaseModel):
 
 class MediaEntityDisplay(MediaEntityBase):
     id: UUID
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={datetime: lambda dt: dt.isoformat()},
+    )
