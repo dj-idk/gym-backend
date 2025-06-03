@@ -2,6 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile
 
@@ -34,6 +35,7 @@ class ProfileService(BaseCRUDService[Profile, ProfileUpdate, ProfileUpdate]):
         Returns:
             The profile if found, None otherwise
         """
+
         return await self.get_by(db, user_id=user_id)
 
     async def create_or_update_profile(

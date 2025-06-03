@@ -35,14 +35,23 @@ class ProfileUpdate(BaseModel):
     postal_code: Optional[str] = Field(None, max_length=10, pattern=r"^[1-9][0-9]{9}$")
 
 
-class ProfileDisplay(ProfileBase):
-    id: UUID
-    user_id: UUID
+class ProfilePhotoDisplay(MediaEntityDisplay):
+    profile_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProfilePhotoDisplay(MediaEntityDisplay):
-    profile_id: UUID
+class ProfilePhotoSummaryDisplay(BaseModel):
+
+    file_url: str
+    alt_text: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProfileDisplay(ProfileBase):
+    id: UUID
+    user_id: UUID
+    photo: Optional[ProfilePhotoSummaryDisplay]
 
     model_config = ConfigDict(from_attributes=True)

@@ -10,7 +10,8 @@ from src.dependencies import current_user_dependency, db_dependency
 router = APIRouter(prefix="/profiles", tags=["Profile Management"])
 
 
-@router.get("/current", response_model=ProfileDisplay)
+# , response_model=ProfileDisplay
+@router.get("/current")
 async def read_my_profile(
     current_user: current_user_dependency, db: db_dependency
 ) -> ProfileDisplay:
@@ -19,7 +20,8 @@ async def read_my_profile(
     """
     profile = await profile_service.get_profile_by_user_id(db, current_user.id)
     if not profile:
-        raise NotFound("Profiel not found. Please create a profile first.")
+        raise NotFound("Profile not found. Please create a profile first.")
+    return profile
 
 
 @router.post(

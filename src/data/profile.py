@@ -38,6 +38,9 @@ class Profile(BaseEntity):
 
     # Relationships
     user: Mapped["User"] = relationship("User", backref="profile")
+    photo: Mapped[list["ProfilePhoto"]] = relationship(
+        "ProfilePhoto", back_populates="profile", uselist=False, lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Profile {self.first_name} {self.last_name}>"
@@ -53,7 +56,7 @@ class ProfilePhoto(MediaEntity):
     )
 
     # Relationship
-    profile: Mapped["Profile"] = relationship("Profile", backref="photos")
+    profile: Mapped["Profile"] = relationship("Profile", back_populates="photo")
 
     def __repr__(self) -> str:
         return f"<ProfilePhoto {self.file_name}>"
