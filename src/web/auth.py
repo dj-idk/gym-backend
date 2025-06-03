@@ -10,6 +10,8 @@ from src.schema import (
     PasswordResetRequest,
     PasswordReset,
     EmailVerification,
+    PhoneVerificationRequest,
+    PhoneVerificationConfirm,
 )
 from src.service import auth_service
 
@@ -18,10 +20,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: db_dependency) -> Any:
     """
-    Register a new user and return access token.
+    Register a new user and returns a message for phone verification.
     """
     return await auth_service.register_user(db, user_data)
 
@@ -33,6 +35,8 @@ async def login(
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests.
+
+    Note: You can login with username or email.
     """
     return await auth_service.authenticate_user(
         db, form_data.username, form_data.password
@@ -84,3 +88,25 @@ async def refresh_token(db: db_dependency, token=Depends(oauth2_scheme)) -> Any:
     Refresh access token.
     """
     return await auth_service.refresh_token(db, token)
+
+
+@router.post("/verify-phone/request")
+async def request_phone_verification(
+    request_data: PhoneVerificationRequest, db: db_dependency
+) -> Any:
+    """
+    Request a verification code for phone number.
+    """
+    return await auth_service.request_phone_verification(db, request_data.phone_number)
+
+
+@router.post("/verify-phone/confirm", response_model=Token)
+async def confirm_phone_verification(
+    confirm_data: PhoneVerificationConfirm, db: db_dependency
+) -> Any:
+    """
+    Confirm phone number with verification code.
+    """
+    return await auth_service.confirm_phone_verification(
+        db, confirm_data.phone_number, confirm_data.code
+    )
