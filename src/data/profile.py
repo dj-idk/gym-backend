@@ -12,8 +12,8 @@ from .user import User
 class Gender(str, enum.Enum):
     """User gender"""
 
-    MALE = "Male"
-    FEMALE = "Female"
+    MALE = "male"
+    FEMALE = "female"
 
 
 class Profile(BaseEntity):
