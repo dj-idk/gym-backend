@@ -20,7 +20,6 @@ from .auth import (
     TokenPayload,
     PasswordResetRequest,
     PasswordReset,
-    EmailVerification,
     PhoneVerificationRequest,
     PhoneVerificationConfirm,
 )
@@ -47,7 +46,6 @@ __all__ = [
     "TokenPayload",
     "PasswordResetRequest",
     "PasswordReset",
-    "EmailVerification",
     "PhoneVerificationRequest",
     "PhoneVerificationConfirm",
 ]

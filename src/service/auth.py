@@ -208,11 +208,47 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
 
         access_token = self.create_access_token(user.id)
 
+        user.last_login = datetime.now(timezone.utc)
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
         return {
             "access_token": access_token,
             "token_type": "bearer",
             "expires_at": AuthService.calculate_token_expire_delta(datetime.now()),
         }
+
+    async def refresh_token(self, db: AsyncSession, token: str) -> Dict[str, Any]:
+        """Refresh access token."""
+        try:
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=[self.ALGORITHM]
+            )
+            token_data = TokenPayload(**payload)
+
+            token_info = check_token_in_redis(token_data.jti)
+            if not token_info or token_info.get("is_revoked", False):
+                raise Unauthorized("Token has been invalidated")
+
+            user = await self.get(db, token_data.sub)
+            if not user:
+                raise Unauthorized("Invalid token")
+
+            if not user.is_active:
+                raise Unauthorized("User account is disabled")
+
+            access_token = self.create_access_token(user.id)
+
+            revoke_token_in_redis(token_data.jti)
+
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "expires_at": AuthService.calculate_token_expire_delta(datetime.now()),
+            }
+        except JWTError:
+            raise Unauthorized("Invalid or expired token")
 
     async def logout(self, token: str) -> Dict[str, str]:
         """Invalidate the current token by revoking it in Redis."""
@@ -230,88 +266,56 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
             raise Unauthorized("Invalid token")
 
     async def request_password_reset(
-        self, db: AsyncSession, email: str
+        self, db: AsyncSession, phone_number: str
     ) -> Dict[str, str]:
-        """Generate password reset token and send it to user's email."""
-        user = await self.get_by(db, email=email)
+        """Generate password reset code and send it to user's phone number."""
+        user = await self.get_by(db, phone_number=phone_number)
         if not user:
-            # Don't reveal that the user doesn't exist
             return {
-                "message": "If the email exists, a password reset link has been sent"
+                "message": "Password reset code sent to your phone number",
             }
+        reset_code = AuthService.create_otp()
 
-        # Generate reset token
-        reset_token = self.create_access_token(
-            user.id,
-            expires_delta=timedelta(hours=self.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
+        key = f"password_reset:{phone_number}"
+        redis_client.set(
+            key,
+            reset_code,
+            ex=3600,
         )
 
-        # TODO: Send email with reset token
-        # This would typically involve an email service integration
+        # TODO: In a real application, send the code via SMS
+        # For now, we'll just return the code for testing purposes
 
-        return {"message": "If the email exists, a password reset link has been sent"}
+        return {
+            "message": "Password reset code sent to your phone number",
+            "code": reset_code,
+        }
 
     async def reset_password(
-        self, db: AsyncSession, token: str, new_password: str
+        self, db: AsyncSession, phone_number: str, code: str, new_password: str
     ) -> Dict[str, str]:
-        """Reset user password using token."""
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=[self.ALGORITHM]
-            )
-            token_data = TokenPayload(**payload)
+        """Reset user password using verification code."""
+        user = await self.get_by(db, phone_number=phone_number)
+        if not user:
+            raise NotFound("User with this phone number not found")
 
-            # Check if token is valid in Redis
-            token_info = check_token_in_redis(token_data.jti)
-            if not token_info or token_info.get("is_revoked", False):
-                raise Unauthorized("Token has been invalidated")
+        key = f"password_reset:{phone_number}"
+        stored_code = redis_client.get(key)
 
-            user = await self.get(db, token_data.sub)
-            if not user:
-                raise Unauthorized("Invalid token")
+        if not stored_code:
+            raise NotFound("Reset code expired or not found")
 
-            # Update password
-            hashed_password = self.get_password_hash(new_password)
-            user.hashed_password = hashed_password
-            db.add(user)
-            await db.commit()
+        if stored_code != code:
+            raise BadRequest("Invalid reset code")
 
-            # Revoke the used token
-            revoke_token_in_redis(token_data.jti)
+        hashed_password = self.get_password_hash(new_password)
+        user.hashed_password = hashed_password
+        db.add(user)
+        await db.commit()
 
-            return {"message": "Password has been reset successfully"}
-        except JWTError:
-            raise Unauthorized("Invalid or expired token")
+        redis_client.delete(key)
 
-    async def refresh_token(self, db: AsyncSession, token: str) -> Dict[str, Any]:
-        """Refresh access token."""
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=[self.ALGORITHM]
-            )
-            token_data = TokenPayload(**payload)
-
-            # Check if token is valid in Redis
-            token_info = check_token_in_redis(token_data.jti)
-            if not token_info or token_info.get("is_revoked", False):
-                raise Unauthorized("Token has been invalidated")
-
-            user = await self.get(db, token_data.sub)
-            if not user:
-                raise Unauthorized("Invalid token")
-
-            if not user.is_active:
-                raise Unauthorized("User account is disabled")
-
-            # Create new access token
-            access_token = self.create_access_token(user.id)
-
-            # Revoke the old token
-            revoke_token_in_redis(token_data.jti)
-
-            return {"access_token": access_token, "token_type": "bearer"}
-        except JWTError:
-            raise Unauthorized("Invalid or expired token")
+        return {"message": "Password has been reset successfully"}
 
 
 auth_service = AuthService()

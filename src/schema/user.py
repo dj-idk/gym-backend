@@ -6,6 +6,7 @@ import re
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 from src.data import UserStatus
+from .validators import validate_password, validate_phone_number
 
 
 # Base schemas
@@ -32,50 +33,8 @@ class UserCreate(BaseModel):
     phone_number: str
     password: str
 
-    @field_validator("phone_number")
-    @classmethod
-    def validate_phone_number(cls, v: str) -> str:
-        """
-        Validate that the phone number starts with 09 and has 11 digits total.
-
-        Args:
-            v: The phone number string to validate
-
-        Returns:
-            The validated phone number
-
-        Raises:
-            ValueError: If phone number doesn't match the required format
-        """
-        pattern = r"^09\d{9}$"
-        if not re.match(pattern, v):
-            raise ValueError("Phone number must start with 09 and have 11 digits total")
-        return v
-
-    @field_validator("password", mode="after")
-    @classmethod
-    def validate_password(cls, v: str) -> str:
-        """
-        Validate password strength requirements.
-
-        Args:
-            v: The password string to validate
-
-        Returns:
-            The validated password
-
-        Raises:
-            ValueError: If password doesn't meet security requirements
-        """
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        if not re.search(r"[a-zA-Z]", v):
-            raise ValueError("Password must contain at least one letter")
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
-            raise ValueError("Password must contain at least one special character")
-        return v
+    _validate_phone = field_validator("phone_number")(validate_phone_number)
+    _validate_password = field_validator("password", mode="after")(validate_password)
 
 
 # Update schemas

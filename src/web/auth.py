@@ -9,7 +9,6 @@ from src.schema import (
     UserCreate,
     PasswordResetRequest,
     PasswordReset,
-    EmailVerification,
     PhoneVerificationRequest,
     PhoneVerificationConfirm,
 )
@@ -66,7 +65,7 @@ async def request_password_reset(
     """
     Request a password reset token.
     """
-    return await auth_service.request_password_reset(db, request_data.email)
+    return await auth_service.request_password_reset(db, request_data.phone_number)
 
 
 @router.post("/password-reset/confirm")
@@ -75,7 +74,10 @@ async def reset_password(reset_data: PasswordReset, db: db_dependency) -> Any:
     Reset password using token.
     """
     return await auth_service.reset_password(
-        db, reset_data.token, reset_data.new_password
+        db,
+        reset_data.phone_number,
+        reset_data.code,
+        reset_data.new_password,
     )
 
 
