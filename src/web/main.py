@@ -6,9 +6,14 @@ from starlette_csrf import CSRFMiddleware
 
 from src.middleware import RequestLoggingMiddleware
 from src.utils import setup_limiter, setup_exception_handlers
-from src.data import init_db, close_db_connection, Base
+from src.data import (
+    init_db,
+    close_db_connection,
+    Base,
+    init_roles_and_permissions,
+    get_db_context,
+)
 from src.config import settings
-
 from .auth import router as auth_router
 
 # CORS Variable configuration
@@ -27,6 +32,9 @@ cors_credentials = settings.CORS_ALLOW_CREDENTIALS.lower() == "true"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+
+    async with get_db_context() as session:
+        await init_roles_and_permissions(session)
 
     yield
 
