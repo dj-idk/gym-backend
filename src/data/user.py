@@ -39,7 +39,7 @@ role_permission = Table(
 )
 
 
-class UserStatus(enum.Enum):
+class UserStatus(str, enum.Enum):
     """Enum for user status"""
 
     ACTIVE = "active"

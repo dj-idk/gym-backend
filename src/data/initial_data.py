@@ -1,5 +1,5 @@
 from uuid import uuid4
-from .user import Role, Permission, UserStatus
+from .user import Role, Permission
 
 
 def get_initial_permissions():

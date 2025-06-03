@@ -10,7 +10,6 @@ async def init_roles_and_permissions(db: AsyncSession):
 
     existing_roles = await db.execute(select(Role))
     if existing_roles.scalars().first():
-        print("Roles already exist in database, skipping initialization")
         return
 
     permissions = get_initial_permissions()
@@ -20,5 +19,3 @@ async def init_roles_and_permissions(db: AsyncSession):
     roles = get_initial_roles(permissions)
     db.add_all(roles)
     await db.commit()
-
-    print(f"Initialized {len(permissions)} permissions and {len(roles)} roles")
