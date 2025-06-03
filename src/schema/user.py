@@ -31,7 +31,26 @@ class RoleCreate(RoleBase):
 class UserCreate(BaseModel):
     phone_number: str
     password: str
-    roles: Optional[List[UUID]] = None
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, v: str) -> str:
+        """
+        Validate that the phone number starts with 09 and has 11 digits total.
+
+        Args:
+            v: The phone number string to validate
+
+        Returns:
+            The validated phone number
+
+        Raises:
+            ValueError: If phone number doesn't match the required format
+        """
+        pattern = r"^09\d{9}$"
+        if not re.match(pattern, v):
+            raise ValueError("Phone number must start with 09 and have 11 digits total")
+        return v
 
     @field_validator("password", mode="after")
     @classmethod

@@ -10,13 +10,14 @@ from passlib.context import CryptContext
 from src.data import User
 from src.schema import TokenPayload, UserCreate, UserUpdate
 from src.service.base import BaseCRUDService
-from src.utils.exceptions import BadRequest, Unauthorized, ServiceUnavailable
+from src.utils.exceptions import BadRequest, Unauthorized, ServiceUnavailable, NotFound
 from src.utils.redis import (
     redis_client,
     store_token_in_redis,
     revoke_token_in_redis,
     check_token_in_redis,
 )
+from src.utils import logger
 from src.config import settings
 
 
@@ -75,46 +76,25 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
         """Calculate the expiration time for the access token."""
         return now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    async def register_user(
-        self, db: AsyncSession, user_data: UserCreate
-    ) -> Dict[str, Any]:
-        """Register a new user and return access token."""
-        existing_user = await self.get_by(db, phone_number=user_data.phone_number)
-        if existing_user:
-            raise BadRequest("Phone number already registered")
-
-        hashed_password = self.get_password_hash(user_data.password)
-        user_in_db = User(
-            phone_number=user_data.phone_number,
-            hashed_password=hashed_password,
-            is_active=True,
-            is_verified=False,
-        )
-
-        db.add(user_in_db)
-        await db.commit()
-        await db.refresh(user_in_db)
-
-        return self.request_phone_verification(db, user_data.phone_number)
-
     async def request_phone_verification(
         self, db: AsyncSession, phone_number: str
     ) -> Dict[str, Any]:
         """Send a verification code to the user's phone number."""
         user = await self.get_by(db, phone_number=phone_number)
+
         if not user:
-            raise BadRequest("User with this phone number not found")
+            raise NotFound("User with this phone number not found")
+        if user.is_verified:
+            raise BadRequest("User is already verified")
 
         verification_code = AuthService.create_otp()
-
-        expiry_time = datetime.now(timezone.utc) + timedelta(minutes=10)
 
         key = f"phone_verification:{phone_number}"
 
         redis_client.set(
             key,
             verification_code,
-            ex=expiry_time.timestamp(),  # Expires in 10 minutes
+            ex=600,
         )
 
         # TODO: In a real application, send the code via SMS using a service
@@ -129,20 +109,21 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
         self, db: AsyncSession, phone_number: str, code: str
     ) -> Dict[str, Any]:
         """Verify the code entered by the user."""
-        # Find the user with this phone number
         user = await self.get_by(db, phone_number=phone_number)
+
         if not user:
-            raise BadRequest("User with this phone number not found")
+            raise NotFound("User with this phone number not found")
         if user.is_verified:
             raise BadRequest("User is already verified")
 
         key = f"phone_verification:{phone_number}"
+
         stored_code = redis_client.get(key)
 
         if not stored_code:
-            raise BadRequest("Verification code expired or not found")
+            raise NotFound("Verification code expired or not found")
 
-        if stored_code.decode() != code:
+        if stored_code != code:
             raise BadRequest("Invalid verification code")
 
         user.is_verified = True
@@ -150,7 +131,7 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
         await db.commit()
         await db.refresh(user)
 
-        await redis_client.delete(key)
+        redis_client.delete(key)
 
         access_token = self.create_access_token(user.id)
 
@@ -161,26 +142,69 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
             "expires_at": AuthService.calculate_token_expire_delta(datetime.now()),
         }
 
+    async def register_user(
+        self, db: AsyncSession, user_data: UserCreate
+    ) -> Dict[str, Any]:
+        """Register a new user and return access token."""
+        try:
+            existing_user = await self.get_by(db, phone_number=user_data.phone_number)
+            if existing_user:
+                raise BadRequest("Phone number already registered")
+
+            hashed_password = self.get_password_hash(user_data.password)
+            user_in_db = User(
+                phone_number=user_data.phone_number,
+                hashed_password=hashed_password,
+                is_active=True,
+                is_verified=False,
+            )
+
+            db.add(user_in_db)
+
+            verification_code = AuthService.create_otp()
+            key = f"phone_verification:{user_data.phone_number}"
+
+            redis_client.set(
+                key,
+                verification_code,
+                ex=600,
+            )
+
+            await db.commit()
+            await db.refresh(user_in_db)
+
+            # TODO: In a real application, send the code via SMS
+
+            return {
+                "message": "User registered. Verification code sent to your phone number",
+                "code": verification_code,
+            }
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to register user: {str(e)}")
+            raise ServiceUnavailable("Failed to register user")
+
     async def authenticate_user(
-        self, db: AsyncSession, username_or_email: str, password: str
+        self, db: AsyncSession, credential: str, password: str
     ) -> Dict[str, Any]:
         """Authenticate user and return access token."""
-        user = await self.get_by(
-            db,
-            email=username_or_email,
-            username=username_or_email,
+        user = (
+            await self.get_by(db, email=credential)
+            or await self.get_by(db, username=credential)
+            or await self.get_by(db, phone_number=credential)
         )
+
         if not user:
             raise Unauthorized("Invalid credentials")
         if not user.is_verified:
             raise Unauthorized(
                 "User is not verified. Please verify your phone number first."
             )
-        if not self.verify_password(password, user.hashed_password):
-            raise Unauthorized("Invalid credentials")
-
         if not user.is_active:
             raise Unauthorized("User account is disabled")
+        if not self.verify_password(password, user.hashed_password):
+            raise Unauthorized("Invalid credentials")
 
         access_token = self.create_access_token(user.id)
 

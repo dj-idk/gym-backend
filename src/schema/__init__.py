@@ -21,6 +21,8 @@ from .auth import (
     PasswordResetRequest,
     PasswordReset,
     EmailVerification,
+    PhoneVerificationRequest,
+    PhoneVerificationConfirm,
 )
 
 __all__ = [
@@ -46,4 +48,6 @@ __all__ = [
     "PasswordResetRequest",
     "PasswordReset",
     "EmailVerification",
+    "PhoneVerificationRequest",
+    "PhoneVerificationConfirm",
 ]

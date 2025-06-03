@@ -36,11 +36,19 @@ async def login(
     """
     OAuth2 compatible token login, get an access token for future requests.
 
-    Note: You can login with username or email.
+    Note: You can login with username, email or phone number.
     """
     return await auth_service.authenticate_user(
         db, form_data.username, form_data.password
     )
+
+
+@router.post("/refresh-token", response_model=Token)
+async def refresh_token(db: db_dependency, token=Depends(oauth2_scheme)) -> Any:
+    """
+    Refresh access token.
+    """
+    return await auth_service.refresh_token(db, token)
 
 
 @router.post("/logout")
@@ -80,14 +88,6 @@ async def verify_email(verification_data: EmailVerification, db: db_dependency) 
     Verify user email with token.
     """
     return await auth_service.verify_email(db, verification_data.token)
-
-
-@router.post("/refresh-token", response_model=Token)
-async def refresh_token(db: db_dependency, token=Depends(oauth2_scheme)) -> Any:
-    """
-    Refresh access token.
-    """
-    return await auth_service.refresh_token(db, token)
 
 
 @router.post("/verify-phone/request")

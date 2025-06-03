@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 
 
 class Token(BaseModel):
@@ -56,3 +56,60 @@ class PasswordReset(BaseModel):
 
 class EmailVerification(BaseModel):
     token: str
+
+
+class PhoneVerificationRequest(BaseModel):
+    """Schema for requesting phone verification."""
+
+    phone_number: str = Field(
+        ..., description="Phone number to verify", example="09123456789"
+    )
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, v: str) -> str:
+        """
+        Validate that the phone number starts with 09 and has 11 digits total.
+
+        Args:
+            v: The phone number string to validate
+
+        Returns:
+            The validated phone number
+
+        Raises:
+            ValueError: If phone number doesn't match the required format
+        """
+        pattern = r"^09\d{9}$"
+        if not re.match(pattern, v):
+            raise ValueError("Phone number must start with 09 and have 11 digits total")
+        return v
+
+
+class PhoneVerificationConfirm(BaseModel):
+    """Schema for confirming phone verification."""
+
+    phone_number: str = Field(
+        ..., description="Phone number to verify", example="09123456789"
+    )
+    code: str = Field(..., description="Verification code", example="123456")
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, v: str) -> str:
+        """
+        Validate that the phone number starts with 09 and has 11 digits total.
+
+        Args:
+            v: The phone number string to validate
+
+        Returns:
+            The validated phone number
+
+        Raises:
+            ValueError: If phone number doesn't match the required format
+        """
+        pattern = r"^09\d{9}$"
+        if not re.match(pattern, v):
+            raise ValueError("Phone number must start with 09 and have 11 digits total")
+        return v
