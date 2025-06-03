@@ -3,11 +3,12 @@ from typing import Any, Dict, Optional, Union
 from uuid import UUID, uuid4
 import random
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-from src.data import User
+from src.data import User, Role
 from src.schema import TokenPayload, UserCreate, UserUpdate
 from src.service.base import BaseCRUDService
 from src.utils.exceptions import BadRequest, Unauthorized, ServiceUnavailable, NotFound
@@ -152,11 +153,19 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
                 raise BadRequest("Phone number already registered")
 
             hashed_password = self.get_password_hash(user_data.password)
+
+            result = await db.execute(select(Role).filter(Role.name == "member"))
+            member_role = result.scalars().first()
+
+            if not member_role:
+                raise ServiceUnavailable("Role system not initialized")
+
             user_in_db = User(
                 phone_number=user_data.phone_number,
                 hashed_password=hashed_password,
                 is_active=True,
                 is_verified=False,
+                roles=[member_role],
             )
 
             db.add(user_in_db)
