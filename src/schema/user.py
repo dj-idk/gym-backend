@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+import re
+
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 from src.data import UserStatus
 
@@ -18,7 +20,7 @@ class RoleBase(BaseModel):
 
 
 class UserBase(BaseModel):
-    username: str
+    username: Optional[str]
     email: EmailStr
 
 
@@ -35,6 +37,31 @@ class UserCreate(UserBase):
     password: str
     roles: Optional[List[UUID]] = None
 
+    @field_validator("password", mode="after")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """
+        Validate password strength requirements.
+
+        Args:
+            v: The password string to validate
+
+        Returns:
+            The validated password
+
+        Raises:
+            ValueError: If password doesn't meet security requirements
+        """
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        if not re.search(r"[a-zA-Z]", v):
+            raise ValueError("Password must contain at least one letter")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
+            raise ValueError("Password must contain at least one special character")
+        return v
+
 
 # Update schemas
 class PermissionUpdate(BaseModel):
@@ -49,7 +76,7 @@ class RoleUpdate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
+    username: Optional[str] = None
     is_verified: Optional[bool] = None
     status: Optional[UserStatus] = None
     roles: Optional[List[UUID]] = None
@@ -112,15 +139,6 @@ class UserSummary(BaseModel):
     status: UserStatus
     is_verified: bool
     created_at: datetime
-
-    model_config = ConfigDict(
-        from_attributes=True, json_encoders={datetime: lambda dt: dt.isoformat()}
-    )
-
-
-# Authentication schemas
-class UserWithPassword(UserDisplay):
-    password_hash: str
 
     model_config = ConfigDict(
         from_attributes=True, json_encoders={datetime: lambda dt: dt.isoformat()}

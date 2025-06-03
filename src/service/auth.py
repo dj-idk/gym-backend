@@ -79,6 +79,7 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
 
         hashed_password = self.get_password_hash(user_data.password)
         user_in_db = User(
+            username=user_data.username,
             email=user_data.email,
             hashed_password=hashed_password,
             is_active=True,

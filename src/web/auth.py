@@ -7,16 +7,14 @@ from src.dependencies import db_dependency
 from src.schema import (
     Token,
     UserCreate,
-    UserLogin,
     PasswordResetRequest,
     PasswordReset,
     EmailVerification,
 )
 from src.service import auth_service
-from src.utils import BadRequest, Unauthorized
+
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
@@ -69,6 +67,9 @@ async def reset_password(reset_data: PasswordReset, db: db_dependency) -> Any:
     )
 
 
+# TODO: Implement password change endpoint
+
+
 @router.post("/verify-email")
 async def verify_email(verification_data: EmailVerification, db: db_dependency) -> Any:
     """
@@ -78,7 +79,7 @@ async def verify_email(verification_data: EmailVerification, db: db_dependency) 
 
 
 @router.post("/refresh-token", response_model=Token)
-async def refresh_token(token: str, db: db_dependency) -> Any:
+async def refresh_token(db: db_dependency, token=Depends(oauth2_scheme)) -> Any:
     """
     Refresh access token.
     """

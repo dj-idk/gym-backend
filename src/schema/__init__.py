@@ -19,7 +19,6 @@ from .user import (
 from .auth import (
     Token,
     TokenPayload,
-    UserLogin,
     PasswordResetRequest,
     PasswordReset,
     EmailVerification,
@@ -46,7 +45,6 @@ __all__ = [
     "PermissionSummary",
     "Token",
     "TokenPayload",
-    "UserLogin",
     "PasswordResetRequest",
     "PasswordReset",
     "EmailVerification",
