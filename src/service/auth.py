@@ -64,6 +64,11 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
 
         return encoded_jwt
 
+    @staticmethod
+    def calculate_expire_delta(now: datetime) -> datetime:
+        """Calculate the expiration time for the access token."""
+        return now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
     async def register_user(
         self, db: AsyncSession, user_data: UserCreate
     ) -> Dict[str, Any]:
@@ -89,8 +94,7 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "expires_at": datetime.now()
-            + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            "expires_at": AuthService.calculate_expire_delta(datetime.now()),
         }
 
     async def authenticate_user(
@@ -111,7 +115,11 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
 
         access_token = self.create_access_token(user.id)
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "expires_at": AuthService.calculate_expire_delta(datetime.now()),
+        }
 
     async def logout(self, token: str) -> Dict[str, str]:
         """Invalidate the current token by revoking it in Redis."""

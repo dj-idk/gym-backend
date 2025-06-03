@@ -15,6 +15,8 @@ class Token(BaseModel):
 class TokenPayload(BaseModel):
     sub: UUID
     exp: datetime
+    jti: str
+    iat: datetime = None
 
 
 class UserLogin(BaseModel):

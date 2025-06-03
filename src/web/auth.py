@@ -1,7 +1,7 @@
 from typing import Any
 
-from fastapi import APIRouter, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import APIRouter, status, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from src.dependencies import db_dependency
 from src.schema import (
@@ -15,7 +15,7 @@ from src.schema import (
 from src.service import auth_service
 from src.utils import BadRequest, Unauthorized
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -29,7 +29,10 @@ async def register(user_data: UserCreate, db: db_dependency) -> Any:
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: UserLogin, db: db_dependency) -> Any:
+async def login(
+    db: db_dependency,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests.
     """
@@ -39,7 +42,7 @@ async def login(form_data: UserLogin, db: db_dependency) -> Any:
 
 
 @router.post("/logout")
-async def logout(token: str) -> Any:
+async def logout(token=Depends(oauth2_scheme)) -> Any:
     """
     Logout user by invalidating the current token.
     """
