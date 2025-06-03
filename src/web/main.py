@@ -5,7 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_csrf import CSRFMiddleware
 
 from src.middleware import RequestLoggingMiddleware
-from src.utils import setup_limiter
+from src.utils import setup_limiter, setup_exception_handlers
 from src.data import init_db, close_db_connection, Base
 from src.config import settings
 
@@ -40,6 +40,7 @@ app = FastAPI(
     root_path=settings.API_V1_STR,
 )
 
+setup_exception_handlers(app)
 setup_limiter(app)
 
 

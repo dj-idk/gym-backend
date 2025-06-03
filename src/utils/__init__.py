@@ -22,6 +22,7 @@ from .exceptions import (
     InternalServerError,
     ServiceUnavailable,
 )
+from .exception_handler import setup_exception_handlers
 
 __all__ = [
     "limiter",
@@ -45,4 +46,5 @@ __all__ = [
     "TooManyRequests",
     "InternalServerError",
     "ServiceUnavailable",
+    "setup_exception_handlers",
 ]

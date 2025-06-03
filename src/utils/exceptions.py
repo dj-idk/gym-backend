@@ -33,6 +33,15 @@ class BaseHTTPException(HTTPException):
             message = f"{prefix}: {message}"
         return cls(detail=message)
 
+    def as_response(self):
+        """Convert the exception to a JSONResponse"""
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            status_code=self.status_code,
+            content={"error": self.error_code, "message": self.message},
+        )
+
 
 class BadRequest(BaseHTTPException):
     """Bad request"""
