@@ -69,6 +69,16 @@ class Settings(BaseSettings):
     LIARA_ACCESS_KEY: str
     LIARA_SECRET_KEY: str
 
+    # File format
+    ALLOWED_IMAGE_TYPES: Set[str] = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/bmp",
+        "image/webp",
+    ]
+    ALLOWED_VIDEO_TYPES: Set[str] = ["video/mp4", "video/webm"]
+
     model_config = SettingsConfigDict(
         env_file=".env" if os.getenv("ENVIRONMENT") != "production" else ".env.prod",
         env_file_encoding="utf-8",

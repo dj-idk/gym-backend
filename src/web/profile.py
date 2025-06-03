@@ -6,7 +6,7 @@ from uuid import UUID
 from src.data.database import get_db
 from src.schema.profile import (
     ProfileCreate,
-    ProfileRead,
+    ProfileDisplay,
     ProfileUpdate,
     ProgressRecordCreate,
     ProgressRecordRead,
@@ -14,7 +14,7 @@ from src.schema.profile import (
     ProfilePhotoRead,
 )
 from src.service.profile import profile_service
-from src.utils.auth import get_current_active_user
+from src.dependencies import get_current_user
 from src.utils.exceptions import NotFound
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 @router.get("/me", response_model=ProfileRead)
 async def read_my_profile(
-    current_user=Depends(get_current_active_user), db: AsyncSession = Depends(get_db)
+    current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Get current user's profile.
@@ -33,7 +33,7 @@ async def read_my_profile(
 @router.post("/me", response_model=ProfileRead, status_code=status.HTTP_201_CREATED)
 async def create_my_profile(
     profile_data: ProfileCreate,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -45,7 +45,7 @@ async def create_my_profile(
 @router.patch("/me", response_model=ProfileRead)
 async def update_my_profile(
     profile_update: ProfileUpdate,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -59,7 +59,7 @@ async def update_my_profile(
 async def upload_profile_photo(
     file: UploadFile = File(...),
     is_primary: bool = False,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -73,7 +73,7 @@ async def upload_profile_photo(
 @router.patch("/me/photos/{photo_id}/set-primary")
 async def set_primary_photo(
     photo_id: UUID,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -85,7 +85,7 @@ async def set_primary_photo(
 @router.delete("/me/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_profile_photo(
     photo_id: UUID,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -99,7 +99,7 @@ async def delete_profile_photo(
 @router.post("/me/progress", response_model=ProgressRecordRead)
 async def create_progress_record(
     progress_data: ProgressRecordCreate,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -116,7 +116,7 @@ async def list_progress_records(
     limit: int = 100,
     start_date: str = None,
     end_date: str = None,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -130,7 +130,7 @@ async def list_progress_records(
 @router.get("/me/progress/{record_id}", response_model=ProgressRecordRead)
 async def get_progress_record(
     record_id: UUID,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -143,7 +143,7 @@ async def get_progress_record(
 async def update_progress_record(
     record_id: UUID,
     record_update: ProgressRecordUpdate,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -157,7 +157,7 @@ async def update_progress_record(
 @router.delete("/me/progress/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_progress_record(
     record_id: UUID,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
@@ -173,7 +173,7 @@ async def upload_progress_photo(
     file: UploadFile = File(...),
     category: str = None,
     notes: str = None,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """

@@ -27,6 +27,8 @@ pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
+    """A service for user authentication."""
+
     def __init__(self):
         super().__init__(User)
         self.ALGORITHM = "HS256"

@@ -3,17 +3,18 @@ from typing import Any, List
 from uuid import UUID
 
 from src.dependencies import db_dependency
-from src.schema.user import UserDisplay, UserUpdate, UserList
+from src.schema import PaginatedResponse
+from src.schema.user import UserDisplay, UserUpdate
 from src.service.user import user_service
 from src.dependencies import (
     get_current_user,
     get_current_superuser,
 )
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["Account Mangement"])
 
 
-@router.get("/me", response_model=UserDisplay)
+@router.get("/current", response_model=UserDisplay)
 async def read_current_user(
     current_user=Depends(get_current_user),
 ) -> Any:
@@ -23,11 +24,11 @@ async def read_current_user(
     return current_user
 
 
-@router.patch("/me", response_model=UserDisplay)
+@router.patch("/current", response_model=UserDisplay)
 async def update_current_user(
     db: db_dependency,
     user_update: UserUpdate,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(get_current_user),
 ) -> Any:
     """
     Update current user.
@@ -35,7 +36,7 @@ async def update_current_user(
     return await user_service.update_user(db, current_user.id, user_update)
 
 
-@router.get("", response_model=List[UserList])
+@router.get("", response_model=PaginatedResponse)
 async def list_users(
     db: db_dependency,
     skip: int = 0,
