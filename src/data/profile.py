@@ -5,7 +5,7 @@ import enum
 from sqlalchemy import String, Date, ForeignKey, Float, Text, Enum
 from sqlalchemy.orm import mapped_column, relationship, Mapped
 from sqlalchemy.dialects.postgresql import UUID
-from .base import BaseEntity
+from .base import BaseEntity, MediaEntity
 from .user import User
 
 
@@ -41,3 +41,19 @@ class Profile(BaseEntity):
 
     def __repr__(self) -> str:
         return f"<Profile {self.first_name} {self.last_name}>"
+
+
+class ProfilePhoto(MediaEntity):
+    """User profile photo"""
+
+    __tablename__ = "profile_photos"
+
+    profile_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False
+    )
+
+    # Relationship
+    profile: Mapped["Profile"] = relationship("Profile", backref="photos")
+
+    def __repr__(self) -> str:
+        return f"<ProfilePhoto {self.file_name}>"

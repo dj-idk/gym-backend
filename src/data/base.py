@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, String, Float
 from sqlalchemy.orm import mapped_column, Mapped
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -26,3 +26,15 @@ class BaseEntity(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class MediaEntity(BaseEntity):
+    """Base class for media entities"""
+
+    __abstract__ = True
+
+    file_path: Mapped[str] = mapped_column(String, nullable=False)
+    file_url: Mapped[str] = mapped_column(String, nullable=False)
+    file_name: Mapped[str] = mapped_column(String, nullable=False)
+    file_size: Mapped[int] = mapped_column(Float, nullable=False)
+    file_type: Mapped[str] = mapped_column(String, nullable=False)
