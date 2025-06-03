@@ -283,35 +283,6 @@ class AuthService(BaseCRUDService[User, UserCreate, UserUpdate]):
         except JWTError:
             raise Unauthorized("Invalid or expired token")
 
-    async def verify_email(self, db: AsyncSession, token: str) -> Dict[str, str]:
-        """Verify user email with token."""
-        try:
-            payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=[self.ALGORITHM]
-            )
-            token_data = TokenPayload(**payload)
-
-            # Check if token is valid in Redis
-            token_info = check_token_in_redis(token_data.jti)
-            if not token_info or token_info.get("is_revoked", False):
-                raise Unauthorized("Token has been invalidated")
-
-            user = await self.get(db, token_data.sub)
-            if not user:
-                raise Unauthorized("Invalid token")
-
-            # Mark email as verified
-            user.is_verified = True
-            db.add(user)
-            await db.commit()
-
-            # Revoke the used token
-            revoke_token_in_redis(token_data.jti)
-
-            return {"message": "Email verified successfully"}
-        except JWTError:
-            raise Unauthorized("Invalid or expired token")
-
     async def refresh_token(self, db: AsyncSession, token: str) -> Dict[str, Any]:
         """Refresh access token."""
         try:

@@ -79,17 +79,6 @@ async def reset_password(reset_data: PasswordReset, db: db_dependency) -> Any:
     )
 
 
-# TODO: Implement password change endpoint
-
-
-@router.post("/verify-email")
-async def verify_email(verification_data: EmailVerification, db: db_dependency) -> Any:
-    """
-    Verify user email with token.
-    """
-    return await auth_service.verify_email(db, verification_data.token)
-
-
 @router.post("/verify-phone/request")
 async def request_phone_verification(
     request_data: PhoneVerificationRequest, db: db_dependency
