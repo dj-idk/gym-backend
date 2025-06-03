@@ -1,29 +1,25 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Union, List
-from uuid import UUID, uuid4
+from typing import Optional
+from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile
-from sqlalchemy.sql.expression import Select
 
-from src.data import User, Profile, ProfilePhoto, ProgressRecord, ProgressPhoto
-from src.schema import (
-    ProfileCreate,
-    ProfileUpdate,
-    ProfileDisplay,
-    ProgressRecordCreate,
-    ProgressRecordUpdate,
-)
+from src.data import User, Profile, ProfilePhoto
+from src.schema import ProfileUpdate
+
 from src.service.base import BaseCRUDService
-from src.utils.exceptions import BadRequest, Unauthorized, ServiceUnavailable, NotFound
+from src.utils.exceptions import ServiceUnavailable, NotFound
 from src.utils import logger
 from src.utils.storage import upload_image, delete_file
 from src.config import settings
 
 
-class ProfileService(BaseCRUDService[Profile, ProfileCreate, ProfileUpdate]):
+class ProfileService(BaseCRUDService[Profile, ProfileUpdate, ProfileUpdate]):
     """A service for managing user profiles."""
+
+    def __init__(self):
+        super().__init__(Profile)
 
     async def get_profile_by_user_id(
         self, db: AsyncSession, user_id: UUID
@@ -40,63 +36,44 @@ class ProfileService(BaseCRUDService[Profile, ProfileCreate, ProfileUpdate]):
         """
         return await self.get_by(db, user_id=user_id)
 
-    async def create_profile(
-        self, db: AsyncSession, user_id: UUID, profile_data: ProfileCreate
-    ) -> Profile:
+    async def create_or_update_profile(
+        self, db: AsyncSession, user_id: UUID, profile_data: ProfileUpdate
+    ) -> tuple[Profile, bool]:
         """
-        Create a new profile for a user.
+        Create a new profile for a user or update existing one.
 
         Args:
             db: Database session
             user_id: ID of the user
-            profile_data: Profile creation data
+            profile_data: Profile data for creation or update
 
         Returns:
-            The created profile
+            Tuple containing (profile, created) where created is a boolean
+            indicating if a new profile was created (True) or updated (False)
         """
-        # Check if user exists
-        user_query = select(User).where(User.id == user_id)
-        result = await db.execute(user_query)
-        user = result.scalars().first()
-
+        user = await db.get(User, user_id)
         if not user:
             raise NotFound(f"User with ID {user_id} not found")
 
         # Check if profile already exists
         existing_profile = await self.get_profile_by_user_id(db, user_id)
+
         if existing_profile:
-            raise BadRequest(f"Profile for user with ID {user_id} already exists")
+            # Update existing profile
+            updated_profile = await self.update(
+                db, db_obj=existing_profile, obj_in=profile_data
+            )
+            return updated_profile, False
+        else:
+            # Create new profile
+            profile_dict = profile_data.model_dump()
+            profile = Profile(user_id=user_id, **profile_dict)
 
-        # Create profile object with user_id
-        profile_dict = profile_data.model_dump()
-        profile = Profile(user_id=user_id, **profile_dict)
+            db.add(profile)
+            await db.commit()
+            await db.refresh(profile)
 
-        db.add(profile)
-        await db.commit()
-        await db.refresh(profile)
-
-        return profile
-
-    async def update_profile(
-        self, db: AsyncSession, user_id: UUID, profile_update: ProfileUpdate
-    ) -> Profile:
-        """
-        Update a user's profile.
-
-        Args:
-            db: Database session
-            user_id: ID of the user
-            profile_update: Profile update data
-
-        Returns:
-            The updated profile
-        """
-        profile = await self.get_profile_by_user_id(db, user_id)
-        if not profile:
-            raise NotFound(f"Profile for user with ID {user_id} not found")
-
-        updated_profile = await self.update(db, db_obj=profile, obj_in=profile_update)
-        return updated_profile
+            return profile, True
 
     async def add_profile_photo(
         self, db: AsyncSession, user_id: UUID, file: UploadFile, is_primary: bool = True
@@ -165,31 +142,28 @@ class ProfileService(BaseCRUDService[Profile, ProfileCreate, ProfileUpdate]):
             logger.error(f"Error uploading profile photo: {str(e)}")
             raise ServiceUnavailable("Failed to upload profile photo")
 
-    async def delete_profile_photo(
-        self, db: AsyncSession, user_id: UUID, photo_id: UUID
-    ) -> None:
+    async def delete_profile_photo(self, db: AsyncSession, user_id: UUID) -> None:
         """
-        Delete a profile photo.
+        Delete a user's profile photo.
+        Since there's only one profile photo per user, no photo ID is needed.
 
         Args:
             db: Database session
             user_id: ID of the user
-            photo_id: ID of the photo to delete
         """
         # Get the profile for this user
         profile = await self.get_profile_by_user_id(db, user_id)
         if not profile:
             raise NotFound(f"Profile for user with ID {user_id} not found")
 
-        # Get the photo
-        query = select(ProfilePhoto).where(
-            ProfilePhoto.id == photo_id, ProfilePhoto.profile_id == profile.id
-        )
+        # Get the photo (there should be only one)
+        query = select(ProfilePhoto).where(ProfilePhoto.profile_id == profile.id)
         result = await db.execute(query)
         photo = result.scalars().first()
 
         if not photo:
-            raise NotFound(f"Photo with ID {photo_id} not found")
+            # No photo to delete
+            return None
 
         # Delete the file from storage
         try:

@@ -1,23 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any, List
-from uuid import UUID
+from typing import Any
 
-from src.data.database import get_db
-from src.schema.profile import (
-    ProfileCreate,
-    ProfileDisplay,
-    ProfileUpdate,
-)
+from fastapi import APIRouter, status, UploadFile, File
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+
+from src.schema.profile import ProfileDisplay, ProfileUpdate, ProfilePhotoDisplay
 from src.service.profile import profile_service
-from src.dependencies import get_current_user
+from src.dependencies import current_user_dependency, db_dependency
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
 
 @router.get("/current", response_model=ProfileDisplay)
 async def read_my_profile(
-    current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: current_user_dependency, db: db_dependency
 ) -> Any:
     """
     Get current user's profile.
@@ -25,53 +21,59 @@ async def read_my_profile(
     return await profile_service.get_profile_by_user_id(db, current_user.id)
 
 
-@router.post(
-    "/current", response_model=ProfileDisplay, status_code=status.HTTP_201_CREATED
-)
-async def create_my_profile(
-    profile_data: ProfileCreate,
-    current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+@router.post("/me", response_model=ProfileDisplay, status_code=status.HTTP_201_CREATED)
+async def create_or_update_my_profile(
+    profile_data: ProfileUpdate,
+    current_user: current_user_dependency,
+    db: db_dependency,
 ) -> Any:
     """
-    Create current user's profile.
+    Create or update current user's profile.
     """
-    return await profile_service.create_profile(db, current_user.id, profile_data)
+    profile, created = await profile_service.create_or_update_profile(
+        db, current_user.id, profile_data
+    )
 
+    # Set appropriate status code based on whether a new profile was created
+    if not created:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK, content=jsonable_encoder(profile)
+        )
 
-@router.patch("/current", response_model=ProfileDisplay)
-async def update_my_profile(
-    profile_update: ProfileUpdate,
-    current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> Any:
-    """
-    Update current user's profile.
-    """
-    return await profile_service.update_profile(db, current_user.id, profile_update)
+    return profile
 
 
 # Profile Photos
-@router.post("/current/photos", response_model=ProfilePhotoRead)
+@router.post("/me/photo", response_model=ProfilePhotoDisplay)
 async def upload_profile_photo(
+    db: db_dependency,
+    current_user: current_user_dependency,
     file: UploadFile = File(...),
-    current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
-    Upload a profile photo.
+    Upload or replace a profile photo.
     """
     return await profile_service.add_profile_photo(db, current_user.id, file)
 
 
-@router.delete("/current/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_profile_photo(
-    photo_id: UUID,
-    current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+@router.get("/me/photo", response_model=ProfilePhotoDisplay)
+async def get_profile_photo(
+    current_user: current_user_dependency,
+    db: db_dependency,
 ) -> Any:
     """
-    Delete a profile photo.
+    Get current user's profile photo.
     """
-    await profile_service.delete_profile_photo(db, current_user.id, photo_id)
+    return await profile_service.get_profile_photo(db, current_user.id)
+
+
+@router.delete("/me/photo", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_profile_photo(
+    current_user: current_user_dependency,
+    db: db_dependency,
+) -> Any:
+    """
+    Delete current user's profile photo.
+    """
+    await profile_service.delete_profile_photo(db, current_user.id)
     return None

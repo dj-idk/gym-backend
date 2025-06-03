@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, String, Float
+from typing import Optional
+from sqlalchemy import DateTime, String, Float, JSON, Text
 from sqlalchemy.orm import mapped_column, Mapped
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -38,3 +39,7 @@ class MediaEntity(BaseEntity):
     file_name: Mapped[str] = mapped_column(String, nullable=False)
     file_size: Mapped[int] = mapped_column(Float, nullable=False)
     file_type: Mapped[str] = mapped_column(String, nullable=False)
+
+    alt_text: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    caption: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    media_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)

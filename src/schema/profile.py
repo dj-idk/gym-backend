@@ -4,6 +4,7 @@ from datetime import date
 from uuid import UUID
 
 from src.data import Gender
+from .common import MediaEntityDisplay
 
 
 class ProfileBase(BaseModel):
@@ -17,13 +18,7 @@ class ProfileBase(BaseModel):
     address: Optional[str] = None
     city: Optional[str] = Field(None, max_length=100)
     province: Optional[str] = Field(None, max_length=100)
-    postal_code: Optional[str] = Field(
-        None, max_length=10, pattern=r"\b(?!(\d)\1{3})[13-9]{4}[1346-9][013-9]{5}\b"
-    )
-
-
-class ProfileCreate(ProfileBase):
-    pass
+    postal_code: Optional[str] = Field(None, max_length=10, pattern=r"^[1-9][0-9]{9}$")
 
 
 class ProfileUpdate(BaseModel):
@@ -37,13 +32,17 @@ class ProfileUpdate(BaseModel):
     address: Optional[str] = None
     city: Optional[str] = Field(None, max_length=100)
     province: Optional[str] = Field(None, max_length=100)
-    postal_code: Optional[str] = Field(
-        None, max_length=10, pattern=r"\b(?!(\d)\1{3})[13-9]{4}[1346-9][013-9]{5}\b"
-    )
+    postal_code: Optional[str] = Field(None, max_length=10, pattern=r"^[1-9][0-9]{9}$")
 
 
 class ProfileDisplay(ProfileBase):
     id: UUID
     user_id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProfilePhotoDisplay(MediaEntityDisplay):
+    profile_id: UUID
 
     model_config = ConfigDict(from_attributes=True)

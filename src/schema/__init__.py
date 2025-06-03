@@ -23,7 +23,7 @@ from .auth import (
     PhoneVerificationRequest,
     PhoneVerificationConfirm,
 )
-from .profile import ProfileCreate, ProfileUpdate, ProfileDisplay
+from .profile import ProfileUpdate, ProfileDisplay, ProfilePhotoDisplay
 
 __all__ = [
     "OrderDirection",
@@ -49,7 +49,7 @@ __all__ = [
     "PasswordReset",
     "PhoneVerificationRequest",
     "PhoneVerificationConfirm",
-    "ProfileCreate",
     "ProfileUpdate",
     "ProfileDisplay",
+    "ProfilePhotoDisplay",
 ]

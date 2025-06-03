@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Generic, List, TypeVar
+from typing import Generic, List, TypeVar, Dict, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -41,5 +42,24 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
     items: List[T]
     pagination: Pagination
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MediaEntityBase(BaseModel):
+    file_path: str
+    file_url: str
+    file_name: str
+    file_size: float
+    file_type: str
+    alt_text: Optional[str] = None
+    caption: Optional[str] = None
+    media_metadata: Optional[Dict] = None
+
+
+class MediaEntityDisplay(MediaEntityBase):
+    id: UUID
+    created_at: str
+    updated_at: str
 
     model_config = ConfigDict(from_attributes=True)
