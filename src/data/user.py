@@ -89,13 +89,19 @@ class User(BaseEntity):
     """User model for authentication"""
 
     __tablename__ = "users"
+    phone_number: Mapped[Optional[str]] = mapped_column(
+        String, nullable=False, unique=True, index=True
+    )
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=True)
     username: Mapped[str] = mapped_column(
         String, unique=True, index=True, nullable=True
     )
-    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_email_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     last_login: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

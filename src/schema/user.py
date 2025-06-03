@@ -19,11 +19,6 @@ class RoleBase(BaseModel):
     description: Optional[str] = None
 
 
-class UserBase(BaseModel):
-    username: Optional[str]
-    email: EmailStr
-
-
 # Create schemas
 class PermissionCreate(PermissionBase):
     pass
@@ -33,7 +28,8 @@ class RoleCreate(RoleBase):
     permissions: Optional[List[UUID]] = None
 
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    phone_number: str
     password: str
     roles: Optional[List[UUID]] = None
 
@@ -76,10 +72,7 @@ class RoleUpdate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    is_verified: Optional[bool] = None
-    status: Optional[UserStatus] = None
-    roles: Optional[List[UUID]] = None
+    pass
 
 
 # Display schemas
@@ -106,9 +99,13 @@ class RoleDisplay(RoleBase):
     )
 
 
-class UserDisplay(UserBase):
+class UserDisplay(BaseModel):
     id: UUID
+    phone_number: str
+    username: Optional[str]
+    email: Optional[EmailStr]
     is_verified: bool
+    is_email_verified: bool
     last_login: Optional[datetime] = None
     status: UserStatus
     created_at: datetime

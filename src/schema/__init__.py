@@ -1,6 +1,5 @@
 from .common import OrderDirection, Pagination, PaginatedResponse
 from .user import (
-    UserBase,
     UserCreate,
     UserUpdate,
     UserDisplay,
@@ -28,7 +27,6 @@ __all__ = [
     "OrderDirection",
     "Pagination",
     "PaginatedResponse",
-    "UserBase",
     "UserCreate",
     "UserUpdate",
     "UserDisplay",
