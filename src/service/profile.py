@@ -124,6 +124,8 @@ class ProfileService(BaseCRUDService[Profile, ProfileUpdate, ProfileUpdate]):
                 upload_file=file, entity_type="profile", entity_name=f"user_{user_id}"
             )
 
+            alt_text = f"{profile.first_name if profile.first_name else str(user_id)} {profile.last_name if profile.last_name else ""} profile photo"
+
             # Create photo record
             photo = ProfilePhoto(
                 profile_id=profile.id,
@@ -132,7 +134,7 @@ class ProfileService(BaseCRUDService[Profile, ProfileUpdate, ProfileUpdate]):
                 file_name=file.filename,
                 file_size=file.size,
                 file_type=file.content_type,
-                alt_text=f"User {profile.first_name if profile.first_name else str(user_id)} profile photo",
+                alt_text=alt_text,
             )
 
             db.add(photo)

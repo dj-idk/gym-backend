@@ -17,6 +17,7 @@ from src.config import settings
 
 from .auth import router as auth_router
 from .profile import router as profile_router
+from .user import router as user_router
 
 # CORS Variable configuration
 cors_origins = (
@@ -77,3 +78,4 @@ async def root():
 
 app.include_router(auth_router)
 app.include_router(profile_router)
+app.include_router(user_router)
