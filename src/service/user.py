@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .auth import pwd_context
 from src.data import User
 from src.utils.exceptions import NotFound, BadRequest
 from src.utils.redis import redis_client
@@ -155,7 +156,42 @@ class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
 
         redis_client.delete(redis_key)
 
-        return await self.update(db, db_obj=user, obj_in=update_data)
+        await self.update(db, db_obj=user, obj_in=update_data)
+
+        return {
+            "success": True,
+            "message": "Email verified successfully",
+            "user_id": user.id,
+        }
+
+    async def change_password(
+        self, db: AsyncSession, user_id: UUID, current_password: str, new_password: str
+    ) -> Dict[str, Any]:
+        """
+        Change a user's password with verification of current password.
+
+        Args:
+            db: Database session
+            user_id: User ID
+            current_password: Current password for verification
+            new_password: New password to set
+
+        Returns:
+            Dict with success message and status
+        """
+        user = await self.get_user(db, user_id)
+
+        # Verify current password
+        if not pwd_context.verify(current_password, user.hashed_password):
+            raise BadRequest("Current password is incorrect")
+
+        update_data = {"hashed_password": pwd_context.hash(new_password)}
+        await self.update(db, db_obj=user, obj_in=update_data)
+
+        return {
+            "success": True,
+            "message": "Password changed successfully",
+        }
 
     async def update_user(
         self, db: AsyncSession, user_id: UUID, user_update: UserUpdate

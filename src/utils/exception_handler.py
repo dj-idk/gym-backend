@@ -14,9 +14,18 @@ def setup_exception_handlers(app: FastAPI) -> None:
     ):
         """Handle Pydantic validation errors from request parsing"""
         logger.warning(f"Validation error: {str(exc)}")
-        return UnprocessableEntity(
-            detail=f"Invalid request parameters: {str(exc)}"
-        ).as_response()
+
+        # Extract only the error messages using list comprehension
+        error_messages = [error["msg"] for error in exc.errors() if "msg" in error]
+
+        # Join multiple messages with a semicolon if there are multiple errors
+        detail = (
+            "; ".join(error_messages)
+            if error_messages
+            else "Invalid request parameters"
+        )
+
+        return UnprocessableEntity(detail=detail).as_response()
 
     @app.exception_handler(ResponseValidationError)
     async def response_validation_exception_handler(

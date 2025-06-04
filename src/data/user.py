@@ -39,15 +39,6 @@ role_permission = Table(
 )
 
 
-class UserStatus(str, enum.Enum):
-    """Enum for user status"""
-
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    SUSPENDED = "suspended"
-    PENDING_VERIFICATION = "pending_verification"
-
-
 class Role(BaseEntity):
     """Role model for authorization"""
 
@@ -104,9 +95,6 @@ class User(BaseEntity):
     )
     last_login: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
-    )
-    status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus), default=UserStatus.PENDING_VERIFICATION, nullable=False
     )
 
     # Relationships

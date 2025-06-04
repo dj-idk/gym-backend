@@ -5,7 +5,6 @@ import re
 
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
-from src.data import UserStatus
 from .validators import validate_password, validate_phone_number
 
 
@@ -86,7 +85,6 @@ class UserDisplay(BaseModel):
     is_verified: bool
     is_email_verified: bool
     last_login: Optional[datetime] = None
-    status: UserStatus
     created_at: datetime
     updated_at: Optional[datetime] = None
     roles: List["RoleSummary"] = Field(default_factory=list)
@@ -112,8 +110,8 @@ class RoleSummary(RoleBase):
 class UserSummary(BaseModel):
     id: UUID
     email: EmailStr
-    status: UserStatus
     is_verified: bool
+    is_email_verified: bool
     created_at: datetime
 
     model_config = ConfigDict(
@@ -124,6 +122,53 @@ class UserSummary(BaseModel):
 class UserUpdateResponse(BaseModel):
     user: UserDisplay
     messages: dict
+
+
+class EmailVerificationResponse(BaseModel):
+    """Response model for email verification"""
+
+    success: bool
+    message: str
+    user_id: Optional[UUID] = None
+
+    model_config = ConfigDict(
+        from_attributes=True, json_encoders={datetime: lambda dt: dt.isoformat()}
+    )
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., description="Current password for verification")
+    new_password: str = Field(..., description="New password to set")
+
+    _validate_password_fields = field_validator(
+        "current_password", "new_password", mode="after"
+    )(validate_password)
+
+    @field_validator("new_password")
+    def passwords_must_be_different(cls, v, info):
+        if "current_password" in info.data and v == info.data["current_password"]:
+            raise ValueError("New password must be different from current password")
+        return v
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "current_password": "Current$3cureP@ss",
+                "new_password": "New$3cureP@ss123",
+            }
+        }
+    )
+
+
+class PasswordChangeResponse(BaseModel):
+    success: bool
+    message: str
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"success": True, "message": "Password changed successfully"}
+        }
+    )
 
 
 # Resolve forward references
