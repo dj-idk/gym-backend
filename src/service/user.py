@@ -1,13 +1,15 @@
 import secrets
+import json
 from typing import Optional, Dict, Any, Tuple
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
 
 from src.data import User
+from src.utils.exceptions import NotFound, BadRequest
+from src.utils.redis import redis_client
 from src.schema.user import UserCreate, UserUpdate
 from src.schema import PaginatedResponse
 from src.service.base import BaseCRUDService
@@ -16,7 +18,7 @@ from src.config import settings
 
 class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
     """
-    Service for user-related operations.
+    Service for user management operations.
     """
 
     async def get_user(self, db: AsyncSession, user_id: UUID) -> User:
@@ -25,9 +27,7 @@ class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
         """
         user = await self.get(db, user_id)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
+            raise NotFound("User not found")
         return user
 
     async def get_by_email(self, db: AsyncSession, email: str) -> Optional[User]:
@@ -59,20 +59,14 @@ class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
         user = await self.get_user(db, user_id)
         messages = {}
 
-        # Skip if username is not changing
         if not new_username or new_username == user.username:
             messages["username"] = {"status": "unchanged"}
             return user, messages
 
-        # Check if username is already taken by another user
         existing_user = await self.get_by_username(db, username=new_username)
         if existing_user and existing_user.id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken",
-            )
+            raise BadRequest("Username already taken")
 
-        # Update username
         update_data = {"username": new_username}
         updated_user = await self.update(db, db_obj=user, obj_in=update_data)
         messages["username"] = {"status": "updated", "new_value": new_username}
@@ -96,33 +90,27 @@ class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
         user = await self.get_user(db, user_id)
         messages = {}
 
-        # Skip if email is not changing
         if not new_email or new_email == user.email:
             messages["email"] = {"status": "unchanged"}
             return user, messages
 
-        # Check if email is already taken by another user
         existing_user = await self.get_by_email(db, email=new_email)
         if existing_user and existing_user.id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
-            )
+            raise BadRequest("Email already registered")
 
-        # Generate verification token
         verification_token = secrets.token_urlsafe(32)
-        expiration = datetime.utcnow() + timedelta(hours=24)
+        expiration_seconds = 24 * 60 * 60
+        expiration = datetime.now(timezone.utc) + timedelta(hours=24)
 
-        # Store pending email change
-        update_data = {
-            "pending_email": new_email,
-            "email_verification_token": verification_token,
-            "email_token_expires": expiration,
+        redis_key = f"email_verification:{verification_token}"
+        redis_value = {
+            "user_id": str(user_id),
+            "new_email": new_email,
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        updated_user = await self.update(db, db_obj=user, obj_in=update_data)
+        redis_client.setex(redis_key, expiration_seconds, json.dumps(redis_value))
 
-        # Generate verification URL
         verification_url = f"{settings.SERVER_HOST}{settings.API_V1_STR}/users/verify-email?token={verification_token}"
 
         messages["email"] = {
@@ -132,7 +120,42 @@ class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
             "expires_at": expiration.isoformat(),
         }
 
-        return updated_user, messages
+        return user, messages
+
+    async def verify_email(self, db: AsyncSession, token: str) -> User:
+        """
+        Verify a user's email address using the verification token.
+
+        Args:
+            db: Database session
+            token: Email verification token
+
+        Returns:
+            Updated user object
+        """
+        redis_key = f"email_verification:{token}"
+        token_data = redis_client.get(redis_key)
+
+        if not token_data:
+            raise BadRequest("Invalid verification token")
+
+        try:
+            token_info = json.loads(token_data)
+            user_id = UUID(token_info["user_id"])
+            new_email = token_info["new_email"]
+        except (json.JSONDecodeError, KeyError, ValueError):
+            raise BadRequest("Invalid token data")
+
+        user = await self.get_user(db, user_id)
+
+        update_data = {
+            "email": new_email,
+            "is_email_verified": True,
+        }
+
+        redis_client.delete(redis_key)
+
+        return await self.update(db, db_obj=user, obj_in=update_data)
 
     async def update_user(
         self, db: AsyncSession, user_id: UUID, user_update: UserUpdate
@@ -166,46 +189,6 @@ class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
             update_messages.update(email_messages)
 
         return {"user": user, "messages": update_messages}
-
-    async def verify_email(self, db: AsyncSession, token: str) -> User:
-        """
-        Verify a user's email address using the verification token.
-
-        Args:
-            db: Database session
-            token: Email verification token
-
-        Returns:
-            Updated user object
-        """
-        # Find user with this token
-        query = select(User).where(User.email_verification_token == token)
-        result = await db.execute(query)
-        user = result.scalars().first()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid verification token",
-            )
-
-        # Check if token is expired
-        if user.email_token_expires < datetime.utcnow():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Verification token has expired",
-            )
-
-        # Update email and clear verification fields
-        update_data = {
-            "email": user.pending_email,
-            "pending_email": None,
-            "email_verification_token": None,
-            "email_token_expires": None,
-            "email_verified": True,
-        }
-
-        return await self.update(db, db_obj=user, obj_in=update_data)
 
     async def get_users(
         self, db: AsyncSession, skip: int = 0, limit: int = 100
@@ -288,5 +271,4 @@ class UserService(BaseCRUDService[User, UserCreate, UserUpdate]):
         return await self.update(db, db_obj=user, obj_in={"is_active": False})
 
 
-# Create a singleton instance
 user_service = UserService(User)

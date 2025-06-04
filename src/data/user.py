@@ -111,8 +111,9 @@ class User(BaseEntity):
 
     # Relationships
     roles: Mapped[List["Role"]] = relationship(
-        secondary=user_role, back_populates="users"
+        secondary=user_role, back_populates="users", lazy="joined", uselist=True
     )
 
     def __repr__(self) -> str:
-        return f"<User {self.email}>"
+        # Use the object's memory address instead of any attributes
+        return f"<User at {hex(id(self))}>"

@@ -50,7 +50,8 @@ class RoleUpdate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    pass
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
 
 
 # Display schemas
@@ -88,7 +89,7 @@ class UserDisplay(BaseModel):
     status: UserStatus
     created_at: datetime
     updated_at: Optional[datetime] = None
-    roles: List["RoleDisplay"] = Field(default_factory=list)
+    roles: List["RoleSummary"] = Field(default_factory=list)
 
     model_config = ConfigDict(
         from_attributes=True, json_encoders={datetime: lambda dt: dt.isoformat()}
@@ -118,6 +119,11 @@ class UserSummary(BaseModel):
     model_config = ConfigDict(
         from_attributes=True, json_encoders={datetime: lambda dt: dt.isoformat()}
     )
+
+
+class UserUpdateResponse(BaseModel):
+    user: UserDisplay
+    messages: dict
 
 
 # Resolve forward references
